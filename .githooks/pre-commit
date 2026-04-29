@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROLE=$(cat .ralph/role 2>/dev/null || echo "human")
+STAGED=$(git diff --cached --name-only)
+
+# Always-forbidden: SPEC.md edits by anyone but human
+if [ "$ROLE" != "human" ] && echo "$STAGED" | grep -q "^SPEC\.md$"; then
+  echo "REJECT: $ROLE may not modify SPEC.md"; exit 1
+fi
+
+if [ "$ROLE" = "builder" ]; then
+  if echo "$STAGED" | grep -qE "^tests/acceptance/|^REVIEW\.md$"; then
+    echo "REJECT: builder may not touch tests/acceptance/ or REVIEW.md"; exit 1
+  fi
+fi
+
+if [ "$ROLE" = "critic" ]; then
+  if echo "$STAGED" | grep -qE "^src/|^tests/unit/|^PLAN\.md$"; then
+    echo "REJECT: critic may not touch src/, tests/unit/, or PLAN.md"; exit 1
+  fi
+fi
