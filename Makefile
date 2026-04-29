@@ -1,8 +1,8 @@
 .PHONY: all test acceptance lint typecheck repl clean
 
-PYTHON ?= py
-
 SHELL := /bin/bash
+
+PYTHON ?= $(shell { python3 -c '' >/dev/null 2>&1 && echo python3; } || { py -c '' >/dev/null 2>&1 && echo py; } || echo python)
 
 all: lint typecheck test acceptance
 
