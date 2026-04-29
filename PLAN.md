@@ -1,9 +1,9 @@
 # Implementation plan
 
 ## Phase 1: lexer
-- [ ] Implement tokenizer for parens, integers, booleans, strings, symbols (SPEC §4.1)
-- [ ] LexError with line/col reporting (SPEC §4.2)
-- [ ] Unit tests for each token class
+- [x] Implement tokenizer for parens, integers, booleans, strings, symbols (SPEC ï¿½4.1)
+- [x] LexError with line/col reporting (SPEC ï¿½4.2)
+- [x] Unit tests for each token class
 
 ## Phase 2: parser
 - [ ] Parse S-expressions into AST nodes
