@@ -11,7 +11,7 @@
 - [x] ParseError with location
 
 ## Phase 3: minimal evaluator
-- [ ] Environment class with frames
+- [x] Environment class with frames
 - [ ] Self-evaluating literals
 - [ ] Symbol lookup with unbound-symbol error
 - [ ] Special forms: quote, if, define, lambda
