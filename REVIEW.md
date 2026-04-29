@@ -1,13 +1,15 @@
 STATUS: CHANGES_REQUESTED
 ITERATION: 4
 FINDINGS:
-- README.md:1: the README is empty, so SPEC 9.8 is unmet; it must show installation, a one-line example, and a link to SPEC.md before this can be approved.
-- PLAN.md:51: `examples/` contains no runnable arithmetic, recursion, or higher-order programs, so SPEC 9.7 is unmet.
-- PLAN.md:48: tracked layout-violating artifacts remain (`=3.11...` and `tests/unit/__pycache__/*.pyc`), violating SPEC 3's exact project layout.
-- Makefile:22: `make acceptance` strips carriage returns from expected output, and Makefile:25 and Makefile:31 strip them from stderr/stdout before comparison; this weakens SPEC 7's byte-for-byte acceptance contract and SPEC 6's LF/no-trailing-whitespace requirements.
-- tests/acceptance/err_named_let_out_of_scope.lisp:1: added acceptance coverage for SPEC 5.5.6's named-let exclusion; `make test acceptance lint typecheck` passes with `acceptance: 44/44 passed`.
+- src/mylisp/evaluator.py:246: `cond` accepts an `else` clause before later clauses and immediately returns its body. SPEC 5.5.7 defines `else` as the final fallback clause; `(cond (else 'bad) (#t 'ok))` must not silently print `bad`. Added `tests/acceptance/err_cond_else_not_last.*`; `make test acceptance lint typecheck` now fails at acceptance with `acceptance: 44/45 passed`.
+- Makefile:22: the acceptance runner strips carriage returns from expected output, and Makefile:25 and Makefile:31 strip them from actual stderr/stdout before comparison, weakening SPEC 7's byte-for-byte contract and SPEC 6's LF/no-trailing-whitespace requirement.
+- ./=3.11...@:1: a malformed tracked root-level artifact still violates SPEC 3's exact project layout.
+- tests/unit/__pycache__/test_env.cpython-314-pytest-9.0.3.pyc:1: tracked generated cache files remain under `tests/unit/`, also violating SPEC 3's exact project layout.
+- README.md:1: `README.md` is empty, so SPEC 9.8 is unmet.
+- examples/: the required arithmetic, recursion, and higher-order runnable examples are still absent, so SPEC 9.7 is unmet.
 NEXT_ACTIONS_FOR_BUILDER:
-- Fill README.md with installation instructions, one short one-line example, and a SPEC.md link.
-- Add three runnable examples under examples/: arithmetic, recursion, and higher-order user-code.
-- Remove tracked generated/layout-violating artifacts from the repository.
+- Reject `cond` forms where `else` is not the final clause; make `tests/acceptance/err_cond_else_not_last.lisp` exit 1 with the expected RuntimeError.
 - Restore acceptance comparison to byte-for-byte output without CR stripping.
+- Remove the malformed root artifact and tracked `__pycache__` files from version control.
+- Fill `README.md` with install instructions, a one-line example, and a link to `SPEC.md`.
+- Add the three required runnable example programs under `examples/`.
