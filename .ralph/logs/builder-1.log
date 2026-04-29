@@ -1,0 +1,1 @@
+Committed as `d45e4ec`. Symbol lookup is wired through `Env.lookup`, raising the SPEC §5.9 `unbound symbol:` error on miss; PLAN.md's stale self-evaluating-literals box is also caught up. `make test`, ruff, and mypy --strict are all clean.
