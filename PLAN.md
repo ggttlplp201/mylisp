@@ -48,4 +48,4 @@
 - [x] Remove tracked `=3.11...` malformed root file and `tests/unit/__pycache__` artifacts
 - [x] `mylisp` shim that runs `python3 -m mylisp "$@"` (SPEC §3)
 - [x] README.md content (install + one-line example, link to SPEC.md, SPEC §9.8)
-- [ ] examples/ programs: arithmetic, recursion, higher-order (SPEC §9.7)
+- [x] examples/ programs: arithmetic, recursion, higher-order (SPEC §9.7)
