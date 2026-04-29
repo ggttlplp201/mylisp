@@ -1,0 +1,6 @@
+(write "a\nb")
+(newline)
+(display "a\nb")
+(newline)
+(write (cons 1 (cons 2 3)))
+(newline)

@@ -1,0 +1,5 @@
+((lambda (x)
+   (define y 2)
+   (define z 3)
+   (+ x y z))
+ 4)

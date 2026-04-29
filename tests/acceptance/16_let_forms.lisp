@@ -1,0 +1,5 @@
+(let ((x 1) (y 2)) (+ x y))
+(let* ((x 1) (y (+ x 2))) y)
+(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
+         (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+  (even? 6))

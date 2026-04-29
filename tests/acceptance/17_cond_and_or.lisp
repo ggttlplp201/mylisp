@@ -1,0 +1,6 @@
+(cond ((= 1 2) 'bad) ((= 2 2) 'ok) (else 'bad))
+(and)
+(and #t 0 'last)
+(and #f (undefined))
+(or)
+(or #f "" (undefined))

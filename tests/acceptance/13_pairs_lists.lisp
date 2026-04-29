@@ -1,0 +1,7 @@
+(cons 1 2)
+(car (cons 'a 'b))
+(cdr (cons 'a 'b))
+(list 1 2 3)
+(null? '())
+(pair? (cons 1 '()))
+(length (list 1 2 3))

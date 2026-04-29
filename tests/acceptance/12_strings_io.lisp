@@ -1,0 +1,5 @@
+(string-length "hi\n")
+(string-append "a" "b" "" "c")
+(display "hi\n")
+(write "x\t\\")
+(newline)
