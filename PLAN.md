@@ -6,9 +6,9 @@
 - [x] Unit tests for each token class
 
 ## Phase 2: parser
-- [ ] Parse S-expressions into AST nodes
-- [ ] Handle quote sugar 'X -> (quote X)
-- [ ] ParseError with location
+- [x] Parse S-expressions into AST nodes
+- [x] Handle quote sugar 'X -> (quote X)
+- [x] ParseError with location
 
 ## Phase 3: minimal evaluator
 - [ ] Environment class with frames
