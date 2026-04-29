@@ -6,7 +6,7 @@ Python 3.11+ with no third-party runtime dependencies.
 > **Note:** This was an experimental project run entirely by Claude Code,
 > Codex, and Ralph. It was completed in around 15 iterations. See the
 > Markdown docs in the repo (notably [SPEC.md](SPEC.md) and `PLAN.md`)
-> for a better understanding of the project.
+> for for info.
 
 ## Installation
 
