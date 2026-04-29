@@ -238,12 +238,14 @@ def _parse_bindings(value: Value, ctx: str) -> list[tuple[str, Value]]:
 
 
 def _eval_cond(args: list[Value], env: Env) -> Value:
-    for clause in args:
+    for index, clause in enumerate(args):
         if not isinstance(clause, Pair):
             raise EvalError(f"cond: malformed clause {_write(clause)}")
         test = clause.car
         body = _pair_to_list(clause.cdr)
         if isinstance(test, Symbol) and test.name == "else":
+            if index != len(args) - 1:
+                raise EvalError("cond else clause must be last")
             if not body:
                 raise EvalError("cond: empty else clause")
             return _eval_body(body, env)
