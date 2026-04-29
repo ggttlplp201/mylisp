@@ -12,20 +12,24 @@ test:
 acceptance:
 	@pass=0; total=0; \
 	tmpout=$$(mktemp); tmperr=$$(mktemp); \
-	trap 'rm -f "$$tmpout" "$$tmperr"' EXIT; \
+	tmpoutn=$$(mktemp); tmpexpn=$$(mktemp); \
+	trap 'rm -f "$$tmpout" "$$tmperr" "$$tmpoutn" "$$tmpexpn"' EXIT; \
 	for f in tests/acceptance/*.lisp; do \
 		total=$$((total+1)); \
 		expected=$${f%.lisp}.expected; \
 		base=$$(basename "$$f"); \
 		$(PYTHON) -m mylisp "$$f" >"$$tmpout" 2>"$$tmperr"; code=$$?; \
+		tr -d '\r' < "$$expected" > "$$tmpexpn"; \
 		case "$$base" in \
 			err_*) \
-				if [ $$code -eq 1 ] && cmp -s "$$tmperr" "$$expected"; then \
+				tr -d '\r' < "$$tmperr" > "$$tmpoutn"; \
+				if [ $$code -eq 1 ] && cmp -s "$$tmpoutn" "$$tmpexpn"; then \
 					pass=$$((pass+1)); \
 				fi; \
 				;; \
 			*) \
-				if [ $$code -eq 0 ] && cmp -s "$$tmpout" "$$expected"; then \
+				tr -d '\r' < "$$tmpout" > "$$tmpoutn"; \
+				if [ $$code -eq 0 ] && cmp -s "$$tmpoutn" "$$tmpexpn"; then \
 					pass=$$((pass+1)); \
 				fi; \
 				;; \

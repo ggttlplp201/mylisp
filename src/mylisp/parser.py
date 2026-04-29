@@ -64,14 +64,28 @@ def _parse_list(
     tokens: list[Token], pos: int, open_line: int, open_col: int
 ) -> tuple[Value, int]:
     elements: list[Value] = []
+    tail: Value = EMPTY
     while True:
         tok = tokens[pos]
         if tok.kind == TokenKind.RPAREN:
-            result: Value = EMPTY
+            result: Value = tail
             for elem in reversed(elements):
                 result = Pair(elem, result)
             return result, pos + 1
         if tok.kind == TokenKind.EOF:
             raise ParseError("unterminated list", open_line, open_col)
+        if tok.kind == TokenKind.DOT:
+            if not elements:
+                raise ParseError("unexpected '.'", tok.line, tok.col)
+            tail, pos = _parse_expr(tokens, pos + 1)
+            close = tokens[pos]
+            if close.kind != TokenKind.RPAREN:
+                raise ParseError(
+                    "expected ')' after dotted tail", close.line, close.col
+                )
+            result_dotted: Value = tail
+            for elem in reversed(elements):
+                result_dotted = Pair(elem, result_dotted)
+            return result_dotted, pos + 1
         elem, pos = _parse_expr(tokens, pos)
         elements.append(elem)

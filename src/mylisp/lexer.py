@@ -12,6 +12,7 @@ class TokenKind(Enum):
     LPAREN = auto()
     RPAREN = auto()
     QUOTE = auto()
+    DOT = auto()
     INT = auto()
     BOOL = auto()
     STRING = auto()
@@ -150,7 +151,9 @@ def tokenize(source: str) -> list[Token]:
                 i += 1
                 col += 1
             atom = source[atom_start:i]
-            if _is_integer(atom):
+            if atom == ".":
+                tokens.append(Token(TokenKind.DOT, None, start_line, start_col))
+            elif _is_integer(atom):
                 tokens.append(
                     Token(TokenKind.INT, int(atom), start_line, start_col)
                 )
