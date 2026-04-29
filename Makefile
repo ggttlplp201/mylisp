@@ -18,7 +18,7 @@ acceptance:
 		total=$$((total+1)); \
 		expected=$${f%.lisp}.expected; \
 		base=$$(basename "$$f"); \
-		$(PYTHON) -m mylisp "$$f" >"$$tmpout" 2>"$$tmperr"; code=$$?; \
+		./mylisp "$$f" >"$$tmpout" 2>"$$tmperr"; code=$$?; \
 		tr -d '\r' < "$$expected" > "$$tmpexpn"; \
 		case "$$base" in \
 			err_*) \
@@ -45,7 +45,7 @@ typecheck:
 	$(PYTHON) -m mypy --strict src/mylisp
 
 repl:
-	$(PYTHON) -m mylisp
+	./mylisp
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; \

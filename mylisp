@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Executable shim. Forwards to `python -m mylisp` (SPEC §3).
+set -e
+for candidate in python3 py python; do
+    if command -v "$candidate" >/dev/null 2>&1 \
+        && "$candidate" -c '' >/dev/null 2>&1; then
+        exec "$candidate" -m mylisp "$@"
+    fi
+done
+echo "mylisp: no working Python interpreter found (tried python3, py, python)" >&2
+exit 1
