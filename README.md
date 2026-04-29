@@ -37,6 +37,7 @@ This project used a two-agent autonomous loop (the "Ralph" technique) to build t
 - **Role-enforcement git hook** — A pre-commit hook that rejects commits if an agent tries to touch files outside its role (e.g., Builder modifying acceptance tests).
 
 ### The directory layout
+```
 mylisp/
 ├── SPEC.md                  # immutable contract
 ├── PLAN.md                  # task list, agents update this
@@ -52,6 +53,7 @@ mylisp/
 │   └── check-progress.sh    # stuck-detector
 ├── .githooks/pre-commit     # role enforcement
 └── src/, tests/, examples/
+```
 
 ### Setup
 
