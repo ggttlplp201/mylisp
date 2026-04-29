@@ -1,3 +1,0 @@
-* text=auto eol=lf
-tests/acceptance/*.expected -text
-tests/acceptance/*.lisp text eol=lf
