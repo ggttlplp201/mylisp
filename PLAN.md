@@ -49,3 +49,20 @@
 - [x] `mylisp` shim that runs `python3 -m mylisp "$@"` (SPEC §3)
 - [x] README.md content (install + one-line example, link to SPEC.md, SPEC §9.8)
 - [x] examples/ programs: arithmetic, recursion, higher-order (SPEC §9.7)
+
+## Phase 9: SPEC §9 definition-of-done audit
+Gap analysis on iteration 10: every numbered SPEC §9 clause that the Builder
+can satisfy is satisfied. `make all` is green (ruff clean, mypy --strict clean,
+75/75 unit, 49/49 acceptance). The only outstanding clause is §9.6 (critic
+must re-approve) — REVIEW.md is stale (its single complaint, missing
+`examples/`, was resolved by commit 666b8e3 in iteration 9). No further
+Builder work is required until the Critic re-runs `make all` and updates
+REVIEW.md.
+- [x] §9.1 `make all` exits 0 on a clean checkout
+- [x] §9.2 acceptance coverage spans every §4 / §5 numbered subsection plus each §5.9 error prefix
+- [x] §9.3 `make acceptance` reports n/n with n ≥ 40 (currently 49/49)
+- [x] §9.4 `mypy --strict` clean on `src/mylisp`
+- [x] §9.5 `ruff check` clean on `src` and `tests`
+- [ ] §9.6 Critic's most recent REVIEW.md set to `STATUS: APPROVED` (Critic-only action)
+- [x] §9.7 `examples/` has arithmetic, recursion, and higher-order programs
+- [x] §9.8 README.md shows install, one-line example, and a link to SPEC.md
