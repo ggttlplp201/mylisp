@@ -1,38 +1,47 @@
 .PHONY: all test acceptance lint typecheck repl clean
 
+PYTHON ?= py
+
+SHELL := /bin/bash
+
 all: lint typecheck test acceptance
 
 test:
-	py -m pytest tests/unit -q
+	$(PYTHON) -m pytest tests/unit -q
 
 acceptance:
 	@pass=0; total=0; \
+	tmpout=$$(mktemp); tmperr=$$(mktemp); \
+	trap 'rm -f "$$tmpout" "$$tmperr"' EXIT; \
 	for f in tests/acceptance/*.lisp; do \
 		total=$$((total+1)); \
 		expected=$${f%.lisp}.expected; \
-		if [[ "$$f" == *err_* ]]; then \
-			actual=$$(py -m mylisp "$$f" 2>&1); code=$$?; \
-			if [ $$code -eq 1 ] && grep -qF "$$actual" "$$expected"; then \
-				pass=$$((pass+1)); \
-			fi; \
-		else \
-			actual=$$(py -m mylisp "$$f" 2>/dev/null); \
-			if [ "$$actual" = "$$(cat $$expected)" ]; then \
-				pass=$$((pass+1)); \
-			fi; \
-		fi; \
+		base=$$(basename "$$f"); \
+		$(PYTHON) -m mylisp "$$f" >"$$tmpout" 2>"$$tmperr"; code=$$?; \
+		case "$$base" in \
+			err_*) \
+				if [ $$code -eq 1 ] && cmp -s "$$tmperr" "$$expected"; then \
+					pass=$$((pass+1)); \
+				fi; \
+				;; \
+			*) \
+				if [ $$code -eq 0 ] && cmp -s "$$tmpout" "$$expected"; then \
+					pass=$$((pass+1)); \
+				fi; \
+				;; \
+		esac; \
 	done; \
 	echo "acceptance: $$pass/$$total passed"; \
 	[ $$pass -eq $$total ]
 
 lint:
-	py -m ruff check src tests
+	$(PYTHON) -m ruff check src tests
 
 typecheck:
-	py -m mypy --strict src/mylisp
+	$(PYTHON) -m mypy --strict src/mylisp
 
 repl:
-	py -m mylisp
+	$(PYTHON) -m mylisp
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; \
