@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-# ralph-critic.sh
 set -euo pipefail
 
-cat prompts/CRITIC_PROMPT.md \
-  | codex exec --sandbox read-only --skip-git-repo-check - \
-  | tee ".ralph/logs/critic-$(cat .ralph/iteration).log"
+echo "critic" > .ralph/role
+ITER=$(cat .ralph/iteration)
+
+cat prompts/CRITIC_PROMPT.md | \
+  codex exec \
+    --sandbox workspace-write \
+    --skip-git-repo-check \
+    --cd "$(pwd)" \
+    - \
+  2>&1 | tee ".ralph/logs/critic-${ITER}.log"

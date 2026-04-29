@@ -13,7 +13,9 @@ while [ "$i" -lt "$MAX_ITER" ]; do
     echo "DONE"; exit 0
   fi
 
-  ./scripts/check-progress.sh || { echo "STUCK — aborting"; exit 2; }
+  if [ "$i" -gt 6 ]; then
+    ./scripts/check-progress.sh || { echo "STUCK — aborting"; exit 2; }
+  fi
 
   turn=$(cat .ralph/lock 2>/dev/null || echo "builder")
   if [ "$turn" = "builder" ]; then

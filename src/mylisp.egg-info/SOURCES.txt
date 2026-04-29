@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/mylisp/__init__.py
+src/mylisp/__main__.py
+src/mylisp/ast.py
+src/mylisp/builtins.py
+src/mylisp/env.py
+src/mylisp/evaluator.py
+src/mylisp/lexer.py
+src/mylisp/parser.py
+src/mylisp/printer.py
+src/mylisp.egg-info/PKG-INFO
+src/mylisp.egg-info/SOURCES.txt
+src/mylisp.egg-info/dependency_links.txt
+src/mylisp.egg-info/requires.txt
+src/mylisp.egg-info/top_level.txt

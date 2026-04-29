@@ -1,0 +1,1 @@
+Committed. Phase 3 task 1 (Environment class) is complete: `src/mylisp/env.py` implements `Env` with `define`, `lookup`, `assign`, and `extend`, plus `EvalError` formatting as `RuntimeError: unbound symbol: <name>` per SPEC §5.9. 12 new unit tests in `tests/unit/test_env.py`; full suite is 60/60 passing, mypy --strict and ruff clean.
