@@ -12,8 +12,8 @@
 
 ## Phase 3: minimal evaluator
 - [x] Environment class with frames
-- [ ] Self-evaluating literals
-- [ ] Symbol lookup with unbound-symbol error
+- [x] Self-evaluating literals
+- [x] Symbol lookup with unbound-symbol error
 - [ ] Special forms: quote, if, define, lambda
 - [ ] Procedure application
 

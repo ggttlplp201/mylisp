@@ -53,17 +53,43 @@ def test_self_evaluation_does_not_consult_env():
     # No bindings whatsoever — literals must still evaluate.
     env = Env()
     assert evaluate(123, env) == 123
-    assert evaluate("s", env) is "s" or evaluate("s", env) == "s"
+    assert evaluate("s", env) == "s"
     assert evaluate(True, env) is True
 
 
-def test_symbol_not_yet_evaluable_raises_eval_error():
-    # Symbol/Pair handling lands in subsequent commits; until then the
-    # evaluator must surface a RuntimeError, not crash with an unrelated
-    # Python exception.
+def test_symbol_resolves_to_bound_value():
     env = Env()
-    with pytest.raises(EvalError):
-        evaluate(Symbol("foo"), env)
+    env.define("x", 42)
+    assert evaluate(Symbol("x"), env) == 42
+
+
+def test_symbol_resolves_through_parent_frame():
+    parent = Env()
+    parent.define("g", "from-parent")
+    child = parent.extend()
+    assert evaluate(Symbol("g"), child) == "from-parent"
+
+
+def test_symbol_inner_binding_shadows_outer():
+    parent = Env()
+    parent.define("x", 1)
+    child = parent.extend({"x": 2})
+    assert evaluate(Symbol("x"), child) == 2
+
+
+def test_unbound_symbol_raises_with_spec_prefix():
+    env = Env()
+    with pytest.raises(EvalError) as exc:
+        evaluate(Symbol("nope"), env)
+    assert exc.value.message == "unbound symbol: nope"
+    assert str(exc.value) == "RuntimeError: unbound symbol: nope"
+
+
+def test_symbol_lookup_returns_compound_values_unchanged():
+    env = Env()
+    pair = Pair(1, Pair(2, EMPTY))
+    env.define("xs", pair)
+    assert evaluate(Symbol("xs"), env) is pair
 
 
 def test_pair_not_yet_evaluable_raises_eval_error():
