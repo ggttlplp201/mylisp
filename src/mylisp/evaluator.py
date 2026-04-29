@@ -99,6 +99,9 @@ def _process_internal_defines(body: list[Value], env: Env) -> list[Value]:
             i += 1
             continue
         break
+    for expr in body[i:]:
+        if isinstance(expr, Pair) and isinstance(expr.car, Symbol) and expr.car.name == "define":
+            raise EvalError("define is only permitted at the head of a body")
     return body[i:]
 
 
