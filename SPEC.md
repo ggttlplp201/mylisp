@@ -32,7 +32,10 @@ These are explicitly excluded. Implementing them is a SPEC violation:
 - Continuations / `call/cc`.
 - Tail-call optimization beyond what Python's recursion limit naturally allows.
   The reference test suite never recurses deeper than 200 frames.
-- A module / `import` / `require` system.
+- A module system with search paths, dedup tracking, or namespaces.
+  `require`, `provide`, `import`, and `MYLISP_PATH`-style env-var resolution
+  are all out of scope. The `load` primitive of §5.12 is the ONLY mechanism
+  for loading external code.
 - A foreign function interface.
 - Mutable pairs (`set-car!`, `set-cdr!`). Pairs are immutable.
 - Floating-point. All numbers are Python `int`. See §5.1.
@@ -40,8 +43,12 @@ These are explicitly excluded. Implementing them is a SPEC violation:
   `substring`, etc. — see §5.2 for the full string API.
 - Characters as a distinct type. There is no `#\a` syntax.
 - Vectors, hash tables, records.
-- File I/O beyond reading the program file at startup.
-- Any form of `eval` exposed to user code.
+- User-level file I/O beyond the `load` primitive of §5.12. No
+  `read-file`, `write-file`, `open`, port objects, or any user-visible way
+  to interact with the filesystem outside of `load`.
+- `eval` of strings or in-memory s-expressions exposed to user code.
+  `load` (§5.12) reads, parses, and evaluates a file's top-level forms;
+  it is NOT an `eval` primitive over arbitrary data.
 
 ---
 
@@ -69,7 +76,8 @@ The agents must produce and maintain exactly this layout:
 │       ├── env.py              (Environment class)
 │       ├── builtins.py         (primitive procedures)
 │       ├── evaluator.py        (eval/apply)
-│       └── printer.py          (value -> string, see §6)
+│       ├── printer.py          (value -> string, see §6)
+│       └── prelude.lisp        (Lisp-defined standard library, §5.10)
 ├── tests/
 │   ├── unit/                   (Builder writes these)
 │   └── acceptance/             (Critic writes these; see §7)
@@ -268,6 +276,174 @@ Required error categories (the message MUST start with the listed prefix):
 - `type error: expected <type>, got <printed value>`
 - `division by zero`
 
+### 5.10 Prelude (standard library)
+
+A set of Lisp-defined functions that the interpreter MUST make available
+in the global environment of every program before user code runs.
+
+**Delivery.** The prelude is the file `src/mylisp/prelude.lisp`. At
+interpreter startup, after the global environment is populated with the
+builtins of §5.1–§5.8 and before any user program, `-e` expression, or REPL
+input is evaluated, the interpreter MUST load and evaluate every top-level
+form in `prelude.lisp` against the global env. The prelude file is read by
+the host (Python) and is NOT user-visible file I/O — §2's ban on file I/O
+still applies to user code. Any error raised while loading the prelude is
+fatal: the interpreter prints `RuntimeError: prelude load failed: <message>`
+to stderr and exits with code 1.
+
+**Visibility.** Prelude bindings live in the same global frame as builtins.
+User code may shadow them with `define` or mutate them with `set!`. The
+interpreter MUST NOT expose any way for user code to re-load, skip, or
+introspect the prelude.
+
+**Implementation constraints.**
+
+- `prelude.lisp` may use ONLY the primitives of §5.1–§5.8 and earlier
+  prelude definitions. No new evaluator features.
+- Every function below MUST be defined in `prelude.lisp`, not as a Python
+  builtin. Defining any §5.10 function in Python is a SPEC violation.
+- Type errors propagate naturally from the underlying `car`/`cdr`/etc.
+  calls and use the existing §5.9 prefixes. The prelude introduces no new
+  error categories.
+
+#### 5.10.1 Predicates
+
+- `(not x)` — returns `#t` if `x` is `#f`, else `#f`. Arity 1.
+- `(list? x)` — returns `#t` if `x` is `'()` or a pair whose `cdr` is itself
+  a list (recursive definition). Returns `#f` for any other value, including
+  improper pairs such as `(cons 1 2)`. Arity 1.
+
+#### 5.10.2 Pair selectors
+
+The following 12 functions, each a composition of `car`/`cdr` read
+right-to-left (so `(cadr p)` is `(car (cdr p))`):
+
+```
+caar  cadr  cdar  cddr
+caaar caadr cadar caddr
+cdaar cdadr cddar cdddr
+```
+
+Each takes one argument. Errors propagate from `car`/`cdr` when the input
+is not a pair at the required depth.
+
+#### 5.10.3 List construction
+
+- `(append . lsts)` — variadic. Returns the concatenation of its arguments.
+  `(append)` returns `'()`. `(append lst)` returns `lst`. With two or more
+  args, every argument except the last must be a proper list; if a non-last
+  argument is not a proper list, raise a `type error:` (§5.9). The last
+  argument may be any value and becomes the tail of the result (matching
+  Scheme: `(append '(1 2) 3)` => `(1 2 . 3)`).
+- `(reverse lst)` — returns a new proper list with the elements of `lst`
+  in reverse order. `lst` MUST be a proper list; otherwise `type error:`.
+
+#### 5.10.4 Higher-order list operations
+
+- `(map f lst)` — applies `f` to each element of `lst` in order and returns
+  a proper list of the results. Arity 2. Multi-list `map` is OUT OF SCOPE
+  (the interpreter has no `apply` primitive). `lst` MUST be a proper list.
+- `(filter pred lst)` — returns a new proper list containing those elements
+  `x` of `lst` for which `(pred x)` is not `#f`, in original order. Arity 2.
+- `(foldl f init lst)` — left fold. For `lst = (a b c)`:
+  `(foldl f init '(a b c))` = `(f c (f b (f a init)))`. That is, `f`
+  receives the current element first and the accumulator second (Racket
+  convention). Arity 3.
+- `(foldr f init lst)` — right fold. For `lst = (a b c)`:
+  `(foldr f init '(a b c))` = `(f a (f b (f c init)))`. Arity 3.
+
+For all four, `lst` MUST be a proper list.
+
+#### 5.10.5 List search
+
+- `(member x lst)` — returns the first sublist of `lst` whose `car` is
+  `equal?` to `x`, or `#f` if no such sublist exists. Arity 2.
+- `(memq x lst)` — same, but using `eq?`. Arity 2.
+- `(assoc k alst)` — `alst` is an association list (a list of pairs).
+  Returns the first pair in `alst` whose `car` is `equal?` to `k`, or `#f`
+  if no such pair exists. Arity 2.
+- `(assq k alst)` — same, but using `eq?`. Arity 2.
+
+For all four, the list argument MUST be a proper list. For `assoc`/`assq`,
+encountering a non-pair element while searching raises a `type error:`.
+
+### 5.11 Prelude bootstrap order
+
+Builtins (§5.1–§5.8) MUST be installed in the global env before
+`prelude.lisp` is loaded. The prelude MUST be fully evaluated before any
+of the following happens:
+
+1. A user file (file mode) is read.
+2. A `-e` expression is parsed.
+3. The first REPL prompt is shown.
+
+REPL sessions load the prelude exactly once, at startup. Successive
+inputs share the same global env (and thus the same prelude bindings).
+
+### 5.12 `load`
+
+`(load <path>)` reads, parses, and evaluates the file at `<path>` against
+the global environment. Returns an unspecified value (the REPL prints
+nothing for it, and `load` at the top level of a file produces no output).
+Arity 1; `<path>` MUST be a string.
+
+`load` is a primitive procedure, not a special form. Its argument is
+evaluated before the call (so `(load (string-append dir "/foo.lisp"))`
+works once a `string-append`-returning expression is available).
+
+#### 5.12.1 Path resolution
+
+- If `<path>` begins with `/`, it is absolute and used as-is.
+- Otherwise it is relative:
+  - In file mode, `<path>` is resolved relative to the directory of the
+    file CONTAINING the `load` call. Recursive loads are each resolved
+    against the directory of the file that issued them. The CLI's initial
+    program file is treated as if loaded from the current working
+    directory, so a top-level `(load "x.lisp")` in `./main.lisp` invoked
+    as `./mylisp ./main.lisp` looks for `./x.lisp` (i.e. the directory
+    of `main.lisp` after resolving the initial file's path).
+  - In `-e` mode, `<path>` is resolved relative to the current working
+    directory.
+  - In REPL mode, `<path>` is resolved relative to the current working
+    directory at the time the call is evaluated.
+- The interpreter MUST NOT consult any environment variable, configuration
+  file, or built-in search path. There is no `MYLISP_PATH`.
+
+#### 5.12.2 Evaluation semantics
+
+The target file is read as bytes, decoded as UTF-8, and parsed as a
+sequence of top-level S-expressions (§4). Each form is evaluated in order
+against the GLOBAL environment, regardless of where the `load` call
+appears lexically. `define` adds bindings to the global env; `set!`
+mutates existing bindings.
+
+Top-level values produced during `load` are NOT printed — `load` is
+silent on success, unlike file mode at the CLI which prints each
+top-level value per §6.
+
+`load` does NOT track previously-loaded files. Calling `load` twice with
+the same resolved path evaluates the file twice; side effects compound.
+Cycles in `load` chains (a.lisp loads b.lisp loads a.lisp) are not
+detected. If the chain is infinite, the host's recursion limit applies
+and the resulting error surfaces per §5.9.
+
+#### 5.12.3 Errors
+
+All `load` errors surface using §5.9 prefixes:
+
+- `type error: expected string, got <printed value>` — non-string `<path>`.
+- `RuntimeError: load failed: cannot read <resolved-path>: <reason>` —
+  file does not exist, is unreadable, is a directory, or fails UTF-8
+  decoding. `<reason>` is a short host-supplied phrase, not a Python
+  traceback.
+- `LexError: <message> at line <n>, col <m> in <resolved-path>` — `<resolved-path>`
+  replaces the implicit `<stdin>` source in the location string.
+- `ParseError: <message> at line <n>, col <m> in <resolved-path>` —
+  same treatment.
+- Runtime errors from forms inside the loaded file propagate normally,
+  using their existing prefixes, and ABORT the `load`. Bindings already
+  installed by earlier forms in the same file are NOT rolled back.
+
 ---
 
 ## 6. Printing
@@ -362,6 +538,27 @@ The project is DONE when ALL of the following hold simultaneously:
    in user code).
 8. `README.md` shows installation, a one-line example, and a link to
    `SPEC.md`.
+9. `src/mylisp/prelude.lisp` exists, is loaded at interpreter startup per
+   §5.10–§5.11, and `tests/acceptance/` contains at least one passing test
+   exercising each function listed in §5.10.1 through §5.10.5 (including
+   each of the 12 `c[ad]+r` selectors), plus at least one error-path test
+   covering the new `type error:` cases introduced by `append`, `reverse`,
+   `assoc`, and `assq`.
+10. `load` (§5.12) is implemented as a primitive. `tests/acceptance/`
+    contains at least one happy-path test (a file that uses `load` to pull
+    in a helper file and observes a binding it defined), and at least one
+    error-path test for each new error category in §5.12.3
+    (non-string path, missing file, lex/parse error in the loaded file,
+    runtime error in the loaded file).
+11. REPL upgrades (§11) are implemented and exercised. Because REPL
+    sessions are interactive and not directly executable from `make
+    acceptance`, the Builder MUST add UNIT tests in `tests/unit/` that
+    drive the REPL via its programmatic entry point (a function callable
+    with a `Iterable[str]` of input lines and an output stream). The
+    tests MUST cover: multiline accumulation across two lines, each
+    of `:quit`/`:help`/`:load`/`:env`, recovery after a parse error,
+    recovery after a runtime error, and graceful degradation when
+    `readline` import fails.
 
 The Builder MUST NOT mark the project done by any other criterion. The
 Critic MUST verify each clause of §9 independently before approving.
@@ -374,14 +571,124 @@ Critic MUST verify each clause of §9 independently before approving.
    `test:`, `refactor:`, `docs:`, `chore:`.
 2. Never delete or weaken a test in `tests/acceptance/` to make a build pass.
    Doing so is grounds for the orchestrator to abort the run.
-3. Never widen scope past §4–§5. If a feature seems necessary and is not
-   listed, append a `BLOCKED:` entry to `PLAN.md` and exit. The human
-   resolves it by editing this SPEC.
+3. Never widen scope past §4, §5, or §11. If a feature seems necessary and
+   is not listed, append a `BLOCKED:` entry to `PLAN.md` and exit. The
+   human resolves it by editing this SPEC.
 4. If you are about to write code that "feels like" macros, continuations,
    or eval-of-user-code, stop. Those are out of scope (§2).
 5. The Builder reads `REVIEW.md` first every turn and addresses the top
    `CHANGES_REQUESTED` item before picking new work.
 6. The Critic runs the full `make all` every turn before writing `REVIEW.md`.
+
+---
+
+## 11. REPL behavior
+
+The REPL is the no-args mode (`./mylisp`). Beyond the basic prompt-and-eval
+loop described in §1 and §6, the REPL MUST support the following:
+
+### 11.1 Multiline input
+
+The REPL reads input one line at a time. If the accumulated buffer is not
+yet a complete sequence of one or more S-expressions — because parens are
+unbalanced, a quoted form is missing its target, or a string literal is
+unterminated — the prompt MUST switch from `mylisp> ` to `...... ` (six
+characters, matching the column width of the primary prompt) and the REPL
+MUST keep reading until the buffer parses cleanly. The completed
+expressions are then evaluated and printed per §6 in submission order.
+
+A single line containing multiple complete S-expressions is treated as
+multiple top-level expressions, each evaluated and printed in order.
+
+The accumulated buffer is discarded on any of: EOF, KeyboardInterrupt
+(Ctrl-C), a LexError, a ParseError, or a RuntimeError. After such an
+event the REPL returns to the `mylisp> ` prompt with an empty buffer.
+
+### 11.2 Command history
+
+The REPL MUST integrate with Python's stdlib `readline` (no third-party
+deps). Up/down arrow keys recall prior submissions; left/right arrows and
+the standard line-editing bindings work.
+
+History MUST persist between sessions in `~/.mylisp_history`. The file is
+created on first session if absent. Each entry is one submitted line
+(multiline submissions become multiple readline entries — that is the
+behavior `readline.write_history_file` produces and is acceptable). The
+history file is capped at 1000 entries; older entries are dropped.
+
+The REPL MUST tolerate the absence of the `readline` module (some Windows
+Pythons ship without it) by catching `ImportError` at startup and
+silently degrading to plain `input()`. No warning, no error.
+
+### 11.3 Directives
+
+Any submission whose first non-whitespace character is `:` (colon) is a
+REPL directive, NOT an expression to evaluate. The directive name is the
+first whitespace-delimited token after the colon; arguments follow.
+Unknown directives print
+
+```
+REPL: unknown directive :<name>. Try :help.
+```
+
+to stderr and the REPL continues.
+
+Directives MUST NOT be available outside the REPL. File mode and `-e`
+mode treat a leading `:` per §4.1: `:` is not in the symbol charset and
+will surface as a `LexError`.
+
+The following directives MUST be supported:
+
+- `:quit` (aliases: `:q`, `:exit`) — exits the REPL with status 0.
+  Ctrl-D on an empty `mylisp> ` prompt has the same effect.
+- `:help` — prints a fixed help block listing every directive on a
+  separate line with a short description. The exact text is the
+  Builder's choice; the Critic's acceptance is that every directive name
+  in this section appears in the output.
+- `:load <path>` — equivalent to evaluating `(load "<path>")` at the
+  prompt. `<path>` is the rest of the submission after `:load` and one
+  whitespace character, trimmed of trailing whitespace. The path is NOT
+  quoted in the source; `:load foo bar.lisp` passes the literal string
+  `foo bar.lisp`. Errors are reported per §5.9 and the REPL continues.
+- `:env` — prints the names of every binding currently visible in the
+  global environment, ONE NAME PER LINE, in C-locale (byte-wise) sorted
+  order. Builtins (§5.1–§5.8) and prelude bindings (§5.10) are included.
+  No values are printed. The output ends with a single trailing newline.
+
+### 11.4 Error and signal recovery
+
+A LexError, ParseError, or RuntimeError raised during a REPL submission
+MUST be caught, formatted per §5.9 (LexError uses §4.2 format), printed
+to stderr, and the REPL MUST return to the `mylisp> ` prompt with an
+empty buffer. Python tracebacks MUST NOT reach the user.
+
+KeyboardInterrupt (Ctrl-C) cancels any pending multiline input and
+returns to the `mylisp> ` prompt; it does NOT exit the REPL. EOF on the
+initial line of a submission exits with status 0.
+
+### 11.5 Programmatic entry point
+
+For testability (§9 clause 11), the REPL MUST be exposed as a function
+in `src/mylisp/__main__.py` (or a sibling module imported by it) with
+roughly this signature:
+
+```
+def run_repl(
+    inputs: Iterable[str] | None = None,
+    out: TextIO = sys.stdout,
+    err: TextIO = sys.stderr,
+) -> int: ...
+```
+
+When `inputs is None` the REPL reads from `sys.stdin` and uses
+`readline` per §11.2. When `inputs` is a sequence (test mode), the REPL
+reads lines from it, skips `readline` entirely, and exits when the
+iterator is exhausted. The return value is the would-be exit status
+(0 for normal exit).
+
+The exact function name and module location are the Builder's choice;
+the Critic must be able to import a documented entry point and drive the
+REPL from a unit test.
 
 ---
 
