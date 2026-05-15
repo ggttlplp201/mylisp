@@ -112,11 +112,12 @@ Implementation order matters: 11.1 first, then tests, then 11.2–11.4
 which incrementally widen the error handling.
 
 - [x] 11.1 Implement `load` as a primitive in `src/mylisp/builtins.py`.
-  Approach taken: a new `src/mylisp/loader.py` module owns a `STATE`
-  singleton (global-env reference plus a source-path stack);
-  `__main__._make_global_env` initialises it and `_run_file` pushes the
-  resolved program path onto the stack so `load` calls inside the file
-  resolve relative to its directory. The evaluator itself is unchanged.
+  Approach taken: a `LoadState` class with a `LOADER_STATE` singleton
+  lives in `src/mylisp/evaluator.py` (keeping the source tree in the
+  exact layout SPEC §3 lists). It owns the global-env reference plus a
+  source-path stack; `__main__._make_global_env` initialises it and
+  `_run_file` pushes the resolved program path onto the stack so `load`
+  calls inside the file resolve relative to its directory.
 - [x] 11.2 Implement path resolution per §5.12.1: absolute paths used
   as-is; relative paths in file mode resolve against the parent of the
   currently-evaluating source; in `-e` / REPL mode, relative paths

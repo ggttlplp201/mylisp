@@ -3,10 +3,21 @@
 Special forms are dispatched by symbol head before procedure application.
 ``define`` and ``set!`` return :data:`UNSPECIFIED` so the printer omits them
 at the top level; ``cond`` does the same when no clause matches.
+
+The :data:`LOADER_STATE` singleton tracks two pieces of context the
+``load`` primitive (§5.12) needs but ordinary primitives lack: a reference
+to the global environment (forms in a loaded file evaluate against the
+GLOBAL env regardless of where ``load`` was called from) and a stack of
+the source files currently being evaluated (relative loads resolve against
+the directory of the file containing the call). A stack entry of ``None``
+means the executing code has no associated source (REPL, ``-e``, prelude,
+or a closure defined in any of those), forcing relative paths to fall
+back to ``Path.cwd()``.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 from .ast import (
@@ -20,8 +31,37 @@ from .ast import (
     Value,
 )
 from .env import Env, EvalError
-from .loader import STATE as LOADER_STATE
 from .printer import write as _write
+
+
+class LoadState:
+    """Mutable state shared by ``__main__``, the evaluator, and the ``load`` builtin."""
+
+    __slots__ = ("global_env", "_source_stack")
+
+    def __init__(self) -> None:
+        self.global_env: Env | None = None
+        self._source_stack: list[Path | None] = []
+
+    def init(self, global_env: Env) -> None:
+        """Bind the global env and reset the source stack."""
+        self.global_env = global_env
+        self._source_stack = []
+
+    def current_source(self) -> Path | None:
+        """Return the source of the form currently being evaluated, if any."""
+        if self._source_stack:
+            return self._source_stack[-1]
+        return None
+
+    def push(self, path: Path | None) -> None:
+        self._source_stack.append(path)
+
+    def pop(self) -> None:
+        self._source_stack.pop()
+
+
+LOADER_STATE: LoadState = LoadState()
 
 
 def evaluate(expr: Value, env: Env) -> Value:

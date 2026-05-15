@@ -234,12 +234,12 @@ def _b_newline(args: list[Value]) -> Value:
 
 def _resolve_load_path(raw: str) -> Path:
     """Apply SPEC §5.12.1 path resolution to a raw ``load`` argument."""
-    from .loader import STATE
+    from .evaluator import LOADER_STATE
 
     path = Path(raw)
     if path.is_absolute():
         return path
-    current = STATE.current_source()
+    current = LOADER_STATE.current_source()
     base = current.parent if current is not None else Path.cwd()
     return base / path
 
@@ -275,9 +275,8 @@ def _b_load(args: list[Value]) -> Value:
     _exact_arity("load", args, 1)
     path_str = _check_string(args[0])
 
-    from .evaluator import evaluate
+    from .evaluator import LOADER_STATE, evaluate
     from .lexer import LexError, tokenize
-    from .loader import STATE
     from .parser import ParseError, parse
 
     resolved = _resolve_load_path(path_str)
@@ -296,15 +295,15 @@ def _b_load(args: list[Value]) -> Value:
             exc.message, exc.line, exc.col, source=resolved_str
         ) from None
 
-    if STATE.global_env is None:
+    if LOADER_STATE.global_env is None:
         raise EvalError("load failed: interpreter state not initialized")
 
-    STATE.push(resolved)
+    LOADER_STATE.push(resolved)
     try:
         for expr in exprs:
-            evaluate(expr, STATE.global_env)
+            evaluate(expr, LOADER_STATE.global_env)
     finally:
-        STATE.pop()
+        LOADER_STATE.pop()
     return UNSPECIFIED
 
 

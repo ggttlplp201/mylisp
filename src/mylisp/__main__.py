@@ -23,10 +23,9 @@ from . import MylispError
 from .ast import Unspecified
 from .builtins import builtin_bindings
 from .env import Env
+from .evaluator import LOADER_STATE, evaluate
 from .lexer import tokenize
-from .loader import STATE as LOADER_STATE
 from .parser import parse
-from .evaluator import evaluate
 from .printer import write
 
 
