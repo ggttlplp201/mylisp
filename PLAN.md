@@ -90,7 +90,8 @@ and earlier prelude definitions — no new evaluator features.
 - [x] 10.4 Implement §5.10.2: the 12 `c[ad]+r` selectors.
 - [x] 10.5 Implement §5.10.3: `append` (variadic; preserves Scheme's
   improper-tail behavior; raises `type error:` for non-list non-tail args),
-  `reverse`.
+  `reverse`. Helpers are scoped inside `letrec` so the prelude exports
+  only the SPEC-listed bindings (no `_append2` / `_reverse-acc` leak).
 - [x] 10.6 Implement §5.10.4: `map`, `filter`, `foldl`, `foldr`. Mind the
   Racket-style `foldl` argument order (element first, accumulator second).
 - [x] 10.7 Implement §5.10.5: `member`, `memq`, `assoc`, `assq`.

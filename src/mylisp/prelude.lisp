@@ -28,28 +28,25 @@
 (define (cdddr p) (cdr (cdr (cdr p))))
 
 ; §5.10.3 List construction
-(define (_append2 xs ys)
-  (if (null? xs)
-      ys
-      (cons (car xs) (_append2 (cdr xs) ys))))
-
-(define (_append-tail lsts)
-  (if (null? (cdr lsts))
-      (car lsts)
-      (_append2 (car lsts) (_append-tail (cdr lsts)))))
-
 (define (append . lsts)
-  (if (null? lsts)
-      '()
-      (_append-tail lsts)))
-
-(define (_reverse-acc lst acc)
-  (if (null? lst)
-      acc
-      (_reverse-acc (cdr lst) (cons (car lst) acc))))
+  (letrec ((append2 (lambda (xs ys)
+                      (if (null? xs)
+                          ys
+                          (cons (car xs) (append2 (cdr xs) ys)))))
+           (loop (lambda (lsts)
+                   (if (null? (cdr lsts))
+                       (car lsts)
+                       (append2 (car lsts) (loop (cdr lsts)))))))
+    (if (null? lsts)
+        '()
+        (loop lsts))))
 
 (define (reverse lst)
-  (_reverse-acc lst '()))
+  (letrec ((loop (lambda (lst acc)
+                   (if (null? lst)
+                       acc
+                       (loop (cdr lst) (cons (car lst) acc))))))
+    (loop lst '())))
 
 ; §5.10.4 Higher-order list operations
 (define (map f lst)
