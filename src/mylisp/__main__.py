@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 import sys
+from importlib.resources import files
 from typing import Optional, cast
 
 from . import MylispError
@@ -27,8 +28,35 @@ from .evaluator import evaluate
 from .printer import write
 
 
+class PreludeLoadError(MylispError):
+    """Raised when ``prelude.lisp`` fails to load. See SPEC §5.10."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(f"RuntimeError: prelude load failed: {message}")
+        self.message: str = message
+
+
+def _load_prelude(env: Env) -> None:
+    """Read and evaluate ``prelude.lisp`` against ``env`` (SPEC §5.10, §5.11)."""
+    try:
+        source = files("mylisp").joinpath("prelude.lisp").read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError) as exc:
+        raise PreludeLoadError(f"cannot read prelude.lisp: {exc}") from exc
+    try:
+        tokens = tokenize(source)
+        exprs = parse(tokens)
+        for expr in exprs:
+            evaluate(expr, env)
+    except MylispError as exc:
+        inner = getattr(exc, "message", None)
+        msg = inner if isinstance(inner, str) else str(exc)
+        raise PreludeLoadError(msg) from exc
+
+
 def _make_global_env() -> Env:
-    return Env(builtin_bindings())
+    env = Env(builtin_bindings())
+    _load_prelude(env)
+    return env
 
 
 def _run_program(source: str, env: Env) -> None:
@@ -48,8 +76,8 @@ def _run_file(path: str) -> int:
     except OSError as exc:
         sys.stderr.write(f"mylisp: cannot read {path}: {exc}\n")
         return 1
-    env = _make_global_env()
     try:
+        env = _make_global_env()
         _run_program(source, env)
     except MylispError as exc:
         sys.stderr.write(str(exc) + "\n")
@@ -58,8 +86,8 @@ def _run_file(path: str) -> int:
 
 
 def _run_expr(source: str) -> int:
-    env = _make_global_env()
     try:
+        env = _make_global_env()
         _run_program(source, env)
     except MylispError as exc:
         sys.stderr.write(str(exc) + "\n")
@@ -68,7 +96,11 @@ def _run_expr(source: str) -> int:
 
 
 def _run_repl() -> int:
-    env = _make_global_env()
+    try:
+        env = _make_global_env()
+    except MylispError as exc:
+        sys.stderr.write(str(exc) + "\n")
+        return 1
     while True:
         try:
             line = input("mylisp> ")

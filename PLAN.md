@@ -78,9 +78,9 @@ adds the §5.10 prelude. The Builder MUST follow the bootstrap order in
 env, then user code. The prelude file MUST use only §5.1–§5.8 primitives
 and earlier prelude definitions — no new evaluator features.
 
-- [ ] 10.1 Create `src/mylisp/prelude.lisp`. Empty or trivial content
+- [x] 10.1 Create `src/mylisp/prelude.lisp`. Empty or trivial content
   initially; subsequent tasks fill it in.
-- [ ] 10.2 Wire prelude loading in `src/mylisp/__init__.py` (or the
+- [x] 10.2 Wire prelude loading in `src/mylisp/__init__.py` (or the
   environment-construction entry point used by `__main__.py`). Read the
   file via `importlib.resources` or an equivalent stdlib path lookup so
   it works under `pip install -e .`. Errors during load raise
