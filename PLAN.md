@@ -86,14 +86,14 @@ and earlier prelude definitions — no new evaluator features.
   it works under `pip install -e .`. Errors during load raise
   `RuntimeError: prelude load failed: <message>` and exit 1 (CLI),
   matching §5.10's fatal-error contract.
-- [ ] 10.3 Implement §5.10.1: `not`, `list?`.
-- [ ] 10.4 Implement §5.10.2: the 12 `c[ad]+r` selectors.
-- [ ] 10.5 Implement §5.10.3: `append` (variadic; preserves Scheme's
+- [x] 10.3 Implement §5.10.1: `not`, `list?`.
+- [x] 10.4 Implement §5.10.2: the 12 `c[ad]+r` selectors.
+- [x] 10.5 Implement §5.10.3: `append` (variadic; preserves Scheme's
   improper-tail behavior; raises `type error:` for non-list non-tail args),
   `reverse`.
-- [ ] 10.6 Implement §5.10.4: `map`, `filter`, `foldl`, `foldr`. Mind the
+- [x] 10.6 Implement §5.10.4: `map`, `filter`, `foldl`, `foldr`. Mind the
   Racket-style `foldl` argument order (element first, accumulator second).
-- [ ] 10.7 Implement §5.10.5: `member`, `memq`, `assoc`, `assq`.
+- [x] 10.7 Implement §5.10.5: `member`, `memq`, `assoc`, `assq`.
 - [ ] 10.8 Add a `make` rule or pytest unit test that asserts the prelude
   loads cleanly on a fresh env and that each §5.10 binding is present.
 - [ ] 10.9 Update `examples/` so the higher-order example (the user-land
