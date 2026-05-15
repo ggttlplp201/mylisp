@@ -20,6 +20,7 @@ from .ast import (
     Value,
 )
 from .env import Env, EvalError
+from .loader import STATE as LOADER_STATE
 from .printer import write as _write
 
 
@@ -85,7 +86,14 @@ def _apply(proc: Value, args: list[Value]) -> Value:
             frame[proc.rest] = rest_list
         call_env = proc.env.extend(frame)
         body = _process_internal_defines(list(proc.body), call_env)
-        return _eval_body(body, call_env)
+        # SPEC §5.12.1: relative loads inside the body must resolve against
+        # the directory of the file CONTAINING the load expression — i.e.
+        # the file where the closure was defined, not the file that called it.
+        LOADER_STATE.push(proc.source)
+        try:
+            return _eval_body(body, call_env)
+        finally:
+            LOADER_STATE.pop()
     raise EvalError(f"not a procedure: {_write(proc)}")
 
 
@@ -148,7 +156,10 @@ def _eval_define(args: list[Value], env: Env) -> Value:
         head = _check_symbol(target.car, "define")
         params, rest = _parse_formals(target.cdr)
         body = tuple(args[1:])
-        env.define(head.name, Closure(params, rest, body, env))
+        env.define(
+            head.name,
+            Closure(params, rest, body, env, LOADER_STATE.current_source()),
+        )
         return UNSPECIFIED
     raise EvalError(f"define: bad target {_write(target)}")
 
@@ -182,7 +193,7 @@ def _eval_lambda(args: list[Value], env: Env) -> Value:
         raise EvalError(f"arity mismatch: expected at least 2, got {len(args)}")
     params, rest = _parse_formals(args[0])
     body = tuple(args[1:])
-    return Closure(params, rest, body, env)
+    return Closure(params, rest, body, env, LOADER_STATE.current_source())
 
 
 def _eval_let(args: list[Value], env: Env) -> Value:

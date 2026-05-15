@@ -20,13 +20,19 @@ if TYPE_CHECKING:
 
 
 class LoadState:
-    """Tracks the running interpreter's global env and active source stack."""
+    """Tracks the running interpreter's global env and active source stack.
+
+    Stack entries may be ``None``, indicating that the currently executing
+    code has no associated source file (REPL, ``-e``, prelude, or a closure
+    defined in any of those contexts). A ``None`` on top forces relative
+    ``load`` paths in §5.12.1 to fall back to ``Path.cwd()``.
+    """
 
     __slots__ = ("global_env", "_source_stack")
 
     def __init__(self) -> None:
         self.global_env: "Env | None" = None
-        self._source_stack: list[Path] = []
+        self._source_stack: list[Path | None] = []
 
     def init(self, global_env: "Env") -> None:
         """Bind the global env and reset the source stack."""
@@ -34,12 +40,12 @@ class LoadState:
         self._source_stack = []
 
     def current_source(self) -> Path | None:
-        """Return the path of the file currently being evaluated, if any."""
+        """Return the source of the form currently being evaluated, if any."""
         if self._source_stack:
             return self._source_stack[-1]
         return None
 
-    def push(self, path: Path) -> None:
+    def push(self, path: Path | None) -> None:
         self._source_stack.append(path)
 
     def pop(self) -> None:

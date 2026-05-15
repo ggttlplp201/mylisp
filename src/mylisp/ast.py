@@ -13,6 +13,7 @@ constants so identity comparison is reliable.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Union
 
 if TYPE_CHECKING:
@@ -48,12 +49,21 @@ class Pair:
 
 @dataclass(eq=False)
 class Closure:
-    """A user-defined procedure. Identity-based equality (SPEC §5.7)."""
+    """A user-defined procedure. Identity-based equality (SPEC §5.7).
+
+    ``source`` is the file path active when the closure was created (per
+    SPEC §5.12.1: a relative ``load`` inside the body must resolve against
+    the directory of the file CONTAINING the ``load`` expression, not the
+    file that happens to be on top of the load stack at call time).
+    ``None`` means the closure was created in REPL or ``-e`` mode (or the
+    prelude), in which case relative loads fall back to ``Path.cwd()``.
+    """
 
     params: tuple[str, ...]
     rest: str | None
     body: tuple["Value", ...]
     env: "Env"
+    source: Path | None = None
 
 
 @dataclass(eq=False)

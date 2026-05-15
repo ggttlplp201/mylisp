@@ -131,6 +131,12 @@ which incrementally widen the error handling.
   installed in the same file are not rolled back (the `try/finally`
   only pops the source-path stack). Acceptance coverage is the Critic's
   to add per §3.
+- [x] 11.4b Closure-contained relative `load`: closures now capture the
+  active source path at definition time (`Closure.source`) and the
+  evaluator pushes that path while applying them, so a relative `load`
+  inside a closure body resolves against the directory of the file that
+  defined the closure — per SPEC §5.12.1 ("the file CONTAINING the load
+  call"). Regression test in `tests/unit/test_load_closure.py`.
 - [ ] 11.5 Add an `examples/use_load.lisp` + `examples/helpers.lisp`
   pair showing a real `load` usage.
 
