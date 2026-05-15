@@ -16,6 +16,7 @@ from __future__ import annotations
 import io
 import sys
 from importlib.resources import files
+from pathlib import Path
 from typing import Optional, cast
 
 from . import MylispError
@@ -23,6 +24,7 @@ from .ast import Unspecified
 from .builtins import builtin_bindings
 from .env import Env
 from .lexer import tokenize
+from .loader import STATE as LOADER_STATE
 from .parser import parse
 from .evaluator import evaluate
 from .printer import write
@@ -55,6 +57,7 @@ def _load_prelude(env: Env) -> None:
 
 def _make_global_env() -> Env:
     env = Env(builtin_bindings())
+    LOADER_STATE.init(env)
     _load_prelude(env)
     return env
 
@@ -70,18 +73,29 @@ def _run_program(source: str, env: Env) -> None:
 
 
 def _run_file(path: str) -> int:
+    # SPEC §5.11: the prelude must be fully evaluated before the user file is
+    # read; build the global env first so a prelude failure surfaces with its
+    # dedicated prefix before any I/O on the user file.
+    try:
+        env = _make_global_env()
+    except MylispError as exc:
+        sys.stderr.write(str(exc) + "\n")
+        return 1
     try:
         with open(path, "r", encoding="utf-8") as fh:
             source = fh.read()
     except OSError as exc:
         sys.stderr.write(f"mylisp: cannot read {path}: {exc}\n")
         return 1
+    file_path = Path(path).resolve()
+    LOADER_STATE.push(file_path)
     try:
-        env = _make_global_env()
         _run_program(source, env)
     except MylispError as exc:
         sys.stderr.write(str(exc) + "\n")
         return 1
+    finally:
+        LOADER_STATE.pop()
     return 0
 
 

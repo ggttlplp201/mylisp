@@ -15,11 +15,21 @@ from .lexer import Token, TokenKind
 
 
 class ParseError(MylispError):
-    def __init__(self, message: str, line: int, col: int) -> None:
-        super().__init__(f"ParseError: {message} at line {line}, col {col}")
+    def __init__(
+        self,
+        message: str,
+        line: int,
+        col: int,
+        source: str | None = None,
+    ) -> None:
+        loc = f"line {line}, col {col}"
+        if source is not None:
+            loc = f"{loc} in {source}"
+        super().__init__(f"ParseError: {message} at {loc}")
         self.message: str = message
         self.line: int = line
         self.col: int = col
+        self.source: str | None = source
 
 
 def parse(tokens: list[Token]) -> list[Value]:

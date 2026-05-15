@@ -1,4 +1,4 @@
-"""Primitive procedures for mylisp. See SPEC §5.1, §5.2, §5.4, §5.7, §5.8.
+"""Primitive procedures for mylisp. See SPEC §5.1, §5.2, §5.4, §5.7, §5.8, §5.12.
 
 Each primitive is wrapped as a :class:`Builtin`. Arity and type checks
 raise :class:`EvalError` with the SPEC §5.9 prefix the test suite expects.
@@ -7,6 +7,7 @@ raise :class:`EvalError` with the SPEC §5.9 prefix the test suite expects.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Callable
 
 from .ast import (
@@ -231,6 +232,82 @@ def _b_newline(args: list[Value]) -> Value:
     return UNSPECIFIED
 
 
+def _resolve_load_path(raw: str) -> Path:
+    """Apply SPEC §5.12.1 path resolution to a raw ``load`` argument."""
+    from .loader import STATE
+
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    current = STATE.current_source()
+    base = current.parent if current is not None else Path.cwd()
+    return base / path
+
+
+def _read_loaded_source(resolved: Path) -> str:
+    resolved_str = str(resolved)
+    try:
+        return resolved.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise EvalError(
+            f"load failed: cannot read {resolved_str}: file not found"
+        ) from exc
+    except IsADirectoryError as exc:
+        raise EvalError(
+            f"load failed: cannot read {resolved_str}: is a directory"
+        ) from exc
+    except PermissionError as exc:
+        raise EvalError(
+            f"load failed: cannot read {resolved_str}: permission denied"
+        ) from exc
+    except UnicodeDecodeError as exc:
+        raise EvalError(
+            f"load failed: cannot read {resolved_str}: invalid UTF-8"
+        ) from exc
+    except OSError as exc:
+        reason = exc.strerror or "I/O error"
+        raise EvalError(
+            f"load failed: cannot read {resolved_str}: {reason}"
+        ) from exc
+
+
+def _b_load(args: list[Value]) -> Value:
+    _exact_arity("load", args, 1)
+    path_str = _check_string(args[0])
+
+    from .evaluator import evaluate
+    from .lexer import LexError, tokenize
+    from .loader import STATE
+    from .parser import ParseError, parse
+
+    resolved = _resolve_load_path(path_str)
+    resolved_str = str(resolved)
+    source = _read_loaded_source(resolved)
+
+    try:
+        tokens = tokenize(source)
+    except LexError as exc:
+        raise LexError(exc.message, exc.line, exc.col, source=resolved_str) from None
+
+    try:
+        exprs = parse(tokens)
+    except ParseError as exc:
+        raise ParseError(
+            exc.message, exc.line, exc.col, source=resolved_str
+        ) from None
+
+    if STATE.global_env is None:
+        raise EvalError("load failed: interpreter state not initialized")
+
+    STATE.push(resolved)
+    try:
+        for expr in exprs:
+            evaluate(expr, STATE.global_env)
+    finally:
+        STATE.pop()
+    return UNSPECIFIED
+
+
 _BUILTIN_TABLE: dict[str, Callable[[list[Value]], Value]] = {
     "+": _b_add,
     "-": _b_sub,
@@ -258,6 +335,7 @@ _BUILTIN_TABLE: dict[str, Callable[[list[Value]], Value]] = {
     "display": _b_display,
     "write": _b_write,
     "newline": _b_newline,
+    "load": _b_load,
 }
 
 

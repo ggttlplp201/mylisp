@@ -110,22 +110,27 @@ amended §2.
 Implementation order matters: 11.1 first, then tests, then 11.2–11.4
 which incrementally widen the error handling.
 
-- [ ] 11.1 Implement `load` as a primitive in `src/mylisp/builtins.py`.
-  Happy path only: absolute paths and paths resolvable in the trivial
-  case. The evaluator MUST track the "current file" for each form so
-  `load`'s relative-path resolution (§5.12.1) works from inside a
-  loaded file. Suggested approach: thread a `source_path: Path | None`
-  through the evaluator's `eval` machinery and through `Closure`
-  invocations so deeply-nested `load` calls resolve correctly.
-- [ ] 11.2 Implement path resolution per §5.12.1: absolute, relative to
-  calling file (file mode), relative to CWD (REPL and `-e`).
-- [ ] 11.3 Surface the error categories of §5.12.3 with the exact prefix
-  strings specified there. Include `<resolved-path>` in lex/parse errors
-  emitted from loaded files; the existing lexer/parser likely uses
-  `<stdin>` or similar as the source marker — generalise that.
-- [ ] 11.4 Confirm that a runtime error inside a loaded file aborts the
-  `load` but leaves bindings already created intact (no rollback). Add
-  an acceptance test demonstrating this.
+- [x] 11.1 Implement `load` as a primitive in `src/mylisp/builtins.py`.
+  Approach taken: a new `src/mylisp/loader.py` module owns a `STATE`
+  singleton (global-env reference plus a source-path stack);
+  `__main__._make_global_env` initialises it and `_run_file` pushes the
+  resolved program path onto the stack so `load` calls inside the file
+  resolve relative to its directory. The evaluator itself is unchanged.
+- [x] 11.2 Implement path resolution per §5.12.1: absolute paths used
+  as-is; relative paths in file mode resolve against the parent of the
+  currently-evaluating source; in `-e` / REPL mode, relative paths
+  resolve against `Path.cwd()`.
+- [x] 11.3 Surface the error categories of §5.12.3: `type error: expected
+  string, got …` for non-string args; `RuntimeError: load failed: cannot
+  read …` for FileNotFoundError / IsADirectoryError / PermissionError /
+  UnicodeDecodeError / generic `OSError`; `LexError` / `ParseError` now
+  accept an optional `source` argument that re-renders as
+  `… at line N, col M in <resolved-path>`.
+- [x] 11.4 Runtime errors from forms inside the loaded file propagate
+  using their existing prefixes and abort the `load`; earlier bindings
+  installed in the same file are not rolled back (the `try/finally`
+  only pops the source-path stack). Acceptance coverage is the Critic's
+  to add per §3.
 - [ ] 11.5 Add an `examples/use_load.lisp` + `examples/helpers.lisp`
   pair showing a real `load` usage.
 
