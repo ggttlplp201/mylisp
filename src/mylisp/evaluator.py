@@ -17,8 +17,9 @@ back to ``Path.cwd()``.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TextIO
 
 from .ast import (
     EMPTY,
@@ -37,16 +38,26 @@ from .printer import write as _write
 class LoadState:
     """Mutable state shared by ``__main__``, the evaluator, and the ``load`` builtin."""
 
-    __slots__ = ("global_env", "_source_stack")
+    __slots__ = ("global_env", "_source_stack", "output_stream")
 
     def __init__(self) -> None:
         self.global_env: Env | None = None
         self._source_stack: list[Path | None] = []
+        # SPEC §11.5: the REPL's programmatic entry point exposes an `out`
+        # stream. While that REPL is running, primitive I/O (display/write/
+        # newline) MUST be routed through that stream rather than the real
+        # ``sys.stdout``; this slot is how the builtins find it.
+        self.output_stream: TextIO | None = None
 
     def init(self, global_env: Env) -> None:
         """Bind the global env and reset the source stack."""
         self.global_env = global_env
         self._source_stack = []
+        self.output_stream = None
+
+    def active_output(self) -> TextIO:
+        """Return the stream §5.8 primitives should write to."""
+        return self.output_stream if self.output_stream is not None else sys.stdout
 
     def current_source(self) -> Path | None:
         """Return the source of the form currently being evaluated, if any."""

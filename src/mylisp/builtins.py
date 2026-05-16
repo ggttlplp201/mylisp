@@ -6,7 +6,6 @@ raise :class:`EvalError` with the SPEC §5.9 prefix the test suite expects.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import Callable
 
@@ -216,19 +215,25 @@ def _b_eq_num(args: list[Value]) -> Value:
 
 def _b_display(args: list[Value]) -> Value:
     _exact_arity("display", args, 1)
-    sys.stdout.write(_display(args[0]))
+    from .evaluator import LOADER_STATE
+
+    LOADER_STATE.active_output().write(_display(args[0]))
     return UNSPECIFIED
 
 
 def _b_write(args: list[Value]) -> Value:
     _exact_arity("write", args, 1)
-    sys.stdout.write(_write(args[0]))
+    from .evaluator import LOADER_STATE
+
+    LOADER_STATE.active_output().write(_write(args[0]))
     return UNSPECIFIED
 
 
 def _b_newline(args: list[Value]) -> Value:
     _exact_arity("newline", args, 0)
-    sys.stdout.write("\n")
+    from .evaluator import LOADER_STATE
+
+    LOADER_STATE.active_output().write("\n")
     return UNSPECIFIED
 
 

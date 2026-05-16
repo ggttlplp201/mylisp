@@ -201,3 +201,29 @@ def test_help_text_constant_matches_help_directive_output() -> None:
     rc, out, err = _drive([":help"])
     assert rc == 0
     assert out == HELP_TEXT
+
+
+def test_primitive_io_is_captured_by_injected_out_stream(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """SPEC §11.5: display/write/newline must honour the injected ``out`` stream.
+
+    Regression for iteration 14 REVIEW: the I/O builtins used to write
+    directly to ``sys.stdout``, so REPL test fixtures could not observe
+    side-effecting output.
+    """
+    rc, out, err = _drive(
+        [
+            '(display "hi")',
+            "(newline)",
+            '(write "bye")',
+            "(newline)",
+        ]
+    )
+    assert rc == 0
+    assert err == ""
+    assert out == 'hi\n"bye"\n'
+    # Real stdout/stderr must stay empty: the primitives no longer leak past ``out``.
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""

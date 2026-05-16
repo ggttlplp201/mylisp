@@ -18,7 +18,7 @@ from typing import Iterable, Iterator, TextIO
 from . import MylispError
 from .ast import EMPTY, Pair, Symbol, Unspecified, Value
 from .env import Env
-from .evaluator import evaluate
+from .evaluator import LOADER_STATE, evaluate
 from .lexer import LexError, tokenize
 from .parser import ParseError, parse
 from .printer import write as write_value
@@ -137,6 +137,23 @@ def run_repl(
     else:
         iterator = iter(inputs)
 
+    # SPEC §11.5: builtin I/O (display/write/newline) must go to ``out`` while
+    # the REPL is running. Save and restore so nested or repeated calls don't
+    # leak the test stream into later interpreter use.
+    previous_output = LOADER_STATE.output_stream
+    LOADER_STATE.output_stream = stream_out
+    try:
+        return _repl_loop(iterator, env, stream_out, stream_err)
+    finally:
+        LOADER_STATE.output_stream = previous_output
+
+
+def _repl_loop(
+    iterator: Iterator[str] | None,
+    env: Env,
+    stream_out: TextIO,
+    stream_err: TextIO,
+) -> int:
     buffer = ""
     while True:
         prompt = PRIMARY_PROMPT if not buffer else CONTINUE_PROMPT
