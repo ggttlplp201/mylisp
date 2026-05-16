@@ -4,12 +4,13 @@ A small tree-walking interpreter for a Scheme-flavored Lisp, written in
 Python 3.11+ with no third-party runtime dependencies.
 
 > **Note:** This was an experimental project run entirely by Claude Code,
-> Codex, and Ralph. No human intervention was involved at all. The main
-> purpose was to test techniques of harness engineering for autonoumous
-> workflows in future projects that are more complex. The code base
-> and all testing was completed in around 15 iterations. See the
-> Markdown docs in the repo ([SPEC.md](SPEC.md) and `PLAN.md`)
-> for for info.
+> Codex, and Ralph. No human intervention was involved at all in writing
+> source code. The main purpose was to test techniques of harness
+> engineering for autonomous workflows in future projects that are more
+> complex. The initial language was completed in around 15 iterations;
+> the prelude / `load` / REPL features described below were added in a
+> later run of the same harness. See the Markdown docs in the repo
+> ([SPEC.md](SPEC.md) and `PLAN.md`) for more info.
 
 ## Installation
 
@@ -22,7 +23,42 @@ pip install -e .[dev]
 ```
 $ ./mylisp -e "(+ 1 2 3)"
 6
+
+$ ./mylisp -e "(map (lambda (x) (* x x)) '(1 2 3 4 5))"
+(1 4 9 16 25)
+
+$ ./mylisp
+mylisp> (define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))
+mylisp> (fact 10)
+3628800
+mylisp> :load examples/use_load.lisp
+mylisp> :quit
 ```
+
+## Language
+
+mylisp implements a strict subset of Scheme:
+
+- **Special forms** — `quote`, `if`, `cond`, `and`, `or`, `define`, `set!`,
+  `lambda`, `let`, `let*`, `letrec`, `begin`.
+- **Numbers** — arbitrary-precision integers only. No floats. Operators:
+  `+ - * / quotient remainder modulo < <= > >= =`.
+- **Pairs and lists** — `cons`, `car`, `cdr`, `list`, `null?`, `pair?`, `length`.
+- **Strings** — immutable, with `string-length` and `string-append`.
+- **Equality** — `eq?`, `equal?`.
+- **Prelude (Lisp-defined standard library)** — `not`, `list?`, all 12
+  `c[ad]+r` selectors, `append`, `reverse`, `map`, `filter`, `foldl`, `foldr`,
+  `member`, `memq`, `assoc`, `assq`. Auto-loaded at startup.
+- **`load`** — `(load "path")` reads, parses, and evaluates a Lisp file
+  against the global environment. Relative paths resolve against the file
+  containing the call (and against the working directory in REPL / `-e`
+  mode). Closures capture their defining file's source path.
+- **REPL** — multiline input, persistent history via `readline`
+  (`~/.mylisp_history`), and the directives `:quit`, `:help`, `:load`, `:env`.
+
+Out of scope by design: macros, continuations, `eval` of strings, floats,
+vectors / hash tables / records, mutable pairs, characters as a distinct
+type, anything resembling a module system beyond `load`. See SPEC §2.
 
 ## How this was built
 
@@ -71,11 +107,26 @@ Each iteration: orchestrator checks if done → runs Builder OR Critic → swaps
 
 ### Results
 
+**Initial run** (the core interpreter, §4–§5 of the original SPEC):
+
 - Completed in ~15 iterations
-- 49/49 acceptance tests passing
-- 75/75 unit tests passing
+- 49/49 acceptance tests, 75/75 unit tests
 - Lint and typecheck clean throughout
 - Zero human edits to source code
+
+**Follow-on run** (prelude / `load` / REPL upgrades — §5.10, §5.12, §11):
+
+- The same harness was run again after the human amended SPEC.md to add
+  three new sections. The Builder implemented the features; the Critic
+  added matching acceptance tests and caught real bugs along the way
+  (e.g. `member` / `memq` / `assoc` / `assq` returning before validating
+  list properness, hardcoded paths in test fixtures, `(/ x)` silently
+  accepting unary, prelude not loading in `-e` mode).
+- Ended at 72/72 acceptance tests, 109/109 unit tests
+- Three human interventions during this run: amend SPEC, harden the
+  orchestrator (timeout detection + codex sandbox permissions), and
+  unstick one path-bound test the Critic flagged but didn't fix in-turn.
+  All source code still written by the Builder.
 
 
 ## Specification
