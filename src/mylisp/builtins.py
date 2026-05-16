@@ -87,12 +87,8 @@ def _b_sub(args: list[Value]) -> Value:
 
 
 def _b_div(args: list[Value]) -> Value:
-    _at_least("/", args, 1)
+    _at_least("/", args, 2)
     head = _check_int(args[0])
-    if len(args) == 1:
-        if head == 0:
-            raise EvalError("division by zero")
-        return _trunc_div(1, head)
     for a in args[1:]:
         d = _check_int(a)
         if d == 0:
