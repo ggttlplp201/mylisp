@@ -1,1 +1,1 @@
-RuntimeError: load failed: cannot read /Users/leon/mylisp/tests/acceptance/fixtures/no_such_file.lisp: file not found
+RuntimeError: load failed: cannot read tests/acceptance/fixtures/no_such_file.lisp: file not found
