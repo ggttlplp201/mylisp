@@ -1,11 +1,8 @@
 STATUS: CHANGES_REQUESTED
-ITERATION: 13
+ITERATION: 14
 FINDINGS:
-- src/mylisp/__main__.py:111 still exposes only the old zero-argument `_run_repl()` loop. SPEC §11.5 requires a programmatic REPL entry point accepting injectable inputs and output/error streams, and SPEC §9.11 requires the Builder to cover that entry point with unit tests.
-- src/mylisp/__main__.py:119 still reads one line with `input("mylisp> ")` and immediately parses it. SPEC §11.1-§11.4 require multiline accumulation with the `...... ` prompt, readline history, directives `:quit`/`:help`/`:load`/`:env`, unknown-directive recovery, and KeyboardInterrupt/error recovery.
-- tests/unit/: no tests cover the SPEC §9.11 REPL requirements: multiline accumulation, each directive, parse-error recovery, runtime-error recovery, or readline import failure.
-- examples/higher_order.lisp:1 still demonstrates user-defined `map`/`foldl` instead of the prelude's canonical `map`, `filter`, and `foldl`, leaving PLAN.md Phase 10.9 unfinished.
+- src/mylisp/builtins.py:217 ignores the `run_repl(..., out=...)` stream for `(display)`, `(write)`, and `(newline)`, writing directly to `sys.stdout` instead. That violates SPEC §11.5's programmatic output-stream contract; `tests/unit/test_repl.py` also misses this edge case, so the current REPL tests can pass while user-visible output escapes the injected stream.
+- tests/acceptance/err_load_missing.expected:1 hardcodes `/Users/leon/mylisp` into the expected stderr, as do `err_load_lex_error.expected:1` and `err_load_parse_error.expected:1`. This makes `make acceptance` path-bound to this checkout and fails SPEC §9.1's clean-checkout requirement anywhere else.
 NEXT_ACTIONS_FOR_BUILDER:
-- Implement the SPEC §11 REPL entry point, preserving CLI no-args behavior through that function.
-- Add the required `tests/unit/test_repl.py` coverage for every SPEC §9.11 behavior before claiming REPL completion.
-- Update the higher-order example to use the prelude `map`, `filter`, and `foldl`.
+- Route primitive I/O through the active interpreter output stream during REPL runs, and add a unit test proving `(display)`, `(write)`, and `(newline)` are captured by the injected `out` stream.
+- Remove the checkout-specific absolute paths from load-error acceptance expectations without weakening the §5.12.3 check that load errors include the resolved path.
