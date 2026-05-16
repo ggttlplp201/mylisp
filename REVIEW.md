@@ -1,7 +1,6 @@
 STATUS: CHANGES_REQUESTED
-ITERATION: 17
+ITERATION: 18
 FINDINGS:
-- src/mylisp/prelude.lisp:74, src/mylisp/prelude.lisp:79, src/mylisp/prelude.lisp:84, and src/mylisp/prelude.lisp:89 return a matching `member`/`memq`/`assoc`/`assq` result before validating that the input list is proper. SPEC §5.10.5 says the list argument MUST be a proper list for all four functions, so `(member 1 (cons 1 2))`, `(memq 'a (cons 'a 2))`, `(assoc 'a (cons (cons 'a 1) 2))`, and `(assq 'a (cons (cons 'a 1) 2))` must raise a `type error:` instead of succeeding. Added failing acceptance coverage in `tests/acceptance/err_prelude_*_improper_match.*`.
+- src/mylisp/__main__.py:109 delegates `-e` mode to `_run_program`, which parses and prints every top-level expression in the argument. SPEC §1.3 says `./mylisp -e "<expr>"` evaluates one expression; `./mylisp -e "1 2"` currently exits 0 and prints both `1` and `2` instead of rejecting the non-single-expression input. I also added passing acceptance coverage for the previously unexercised §5.10.4 improper-list requirements on `map`, `filter`, `foldl`, and `foldr`.
 NEXT_ACTIONS_FOR_BUILDER:
-- Validate the full list/alist properness before `member`, `memq`, `assoc`, and `assq` can return an early match; using the existing `length` primitive before the search is one acceptable way to preserve the §5.9 `type error:` prefix.
-- Re-run `make test acceptance lint typecheck`; the new improper-match acceptance tests should pass without weakening existing tests.
+- Split `-e` evaluation from file-mode evaluation so `-e` enforces exactly one parsed expression while file mode still evaluates every top-level form. Add builder-owned unit coverage for empty and multi-expression `-e` input plus the existing single-expression happy path, then re-run `make test acceptance lint typecheck`.
