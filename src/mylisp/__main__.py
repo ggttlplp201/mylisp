@@ -107,12 +107,26 @@ def _run_file(path: str) -> int:
 
 
 def _run_expr(source: str) -> int:
+    # SPEC §1.3: ``./mylisp -e "<expr>"`` evaluates a single expression.
+    # Parse first (cheap, stateless) so we can reject zero- and multi-expression
+    # input before touching the prelude or printing anything.
     try:
-        env = _make_global_env()
-        _run_program(source, env)
+        tokens = tokenize(source)
+        exprs = parse(tokens)
     except MylispError as exc:
         sys.stderr.write(str(exc) + "\n")
         return 1
+    if len(exprs) != 1:
+        sys.stderr.write("mylisp: -e requires exactly one expression\n")
+        return 1
+    try:
+        env = _make_global_env()
+        result = evaluate(exprs[0], env)
+    except MylispError as exc:
+        sys.stderr.write(str(exc) + "\n")
+        return 1
+    if not isinstance(result, Unspecified):
+        sys.stdout.write(write(result) + "\n")
     return 0
 
 
