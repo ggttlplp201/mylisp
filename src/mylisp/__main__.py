@@ -108,38 +108,12 @@ def _run_expr(source: str) -> int:
     return 0
 
 
-def _run_repl() -> int:
-    try:
-        env = _make_global_env()
-    except MylispError as exc:
-        sys.stderr.write(str(exc) + "\n")
-        return 1
-    while True:
-        try:
-            line = input("mylisp> ")
-        except EOFError:
-            sys.stdout.write("\n")
-            return 0
-        except KeyboardInterrupt:
-            sys.stdout.write("\n")
-            continue
-        if not line.strip():
-            continue
-        try:
-            tokens = tokenize(line)
-            exprs = parse(tokens)
-            for expr in exprs:
-                result = evaluate(expr, env)
-                if not isinstance(result, Unspecified):
-                    sys.stdout.write(write(result) + "\n")
-        except MylispError as exc:
-            sys.stderr.write(str(exc) + "\n")
-
-
 def main(argv: Optional[list[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
-        return _run_repl()
+        from .repl import run_repl
+
+        return run_repl()
     if args[0] == "-e":
         if len(args) != 2:
             sys.stderr.write("mylisp: -e requires exactly one argument\n")

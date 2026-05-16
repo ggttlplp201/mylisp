@@ -147,27 +147,29 @@ which incrementally widen the error handling.
 The current REPL in `src/mylisp/__main__.py` is single-line, no history,
 no directives. Phase 12 brings it up to §11.
 
-- [ ] 12.1 Extract REPL logic from `__main__.py` into a function with the
-  signature described in §11.5 (`run_repl(inputs, out, err) -> int`).
-  Argparse code stays in `__main__.py` and calls `run_repl`. Unit-test
-  scaffolding can drive `run_repl` with a list of strings.
-- [ ] 12.2 Implement multiline accumulation (§11.1). A clean approach:
-  parse the buffer after each line; on the parser's "unexpected EOF" /
-  "unbalanced paren" error, keep the buffer and read another line. On
-  any OTHER error, discard the buffer and report. Switch the prompt to
-  `......` while the buffer is non-empty.
-- [ ] 12.3 Wire `readline` per §11.2: history persistence to
-  `~/.mylisp_history`, cap at 1000 entries, `ImportError` -> silent
-  fallback to plain `input()`.
-- [ ] 12.4 Implement directives (§11.3): `:quit`/`:q`/`:exit`, `:help`,
-  `:load <path>`, `:env`. `:load` should call the same `load` machinery
-  introduced in Phase 11 (do NOT duplicate the file-loading code).
-  `:env` enumerates the global env's bindings — that probably requires
-  exposing a `names()` method on `Environment`.
-- [ ] 12.5 Error and signal recovery per §11.4: try/except around each
-  evaluation, KeyboardInterrupt resets the buffer, EOF on empty prompt
-  exits 0.
-- [ ] 12.6 Unit tests in `tests/unit/test_repl.py` covering every clause
-  enumerated in §9 clause 11 (multiline accumulation across two lines,
-  each of the four directives, parse-error recovery, runtime-error
-  recovery, readline-import-failure path).
+- [x] 12.1 REPL logic now lives in `src/mylisp/repl.py` behind the
+  SPEC §11.5 `run_repl(inputs, out, err) -> int` entry point;
+  `__main__.main` delegates to it for the no-args path.
+- [x] 12.2 Multiline accumulation: tokens/parse are re-attempted after
+  each line; only "unterminated list", "expected expression after quote",
+  and "unterminated string literal" buffer further input. Any other
+  LexError/ParseError discards the buffer and is reported. The
+  continuation prompt is `...... ` (SPEC §11.1 literal text).
+- [x] 12.3 `_try_setup_readline` imports `readline` lazily, touches
+  `~/.mylisp_history`, caps it at 1000 entries, and registers an
+  `atexit` history writer. `ImportError` short-circuits to plain
+  `input()` with no warning.
+- [x] 12.4 Directives `:quit`/`:q`/`:exit`, `:help`, `:load <path>`,
+  `:env` implemented in `_handle_directive`. `:load` constructs
+  `(load "<path>")` and feeds it to `evaluate`, reusing the Phase 11
+  load primitive; `:env` calls a new `Env.names()` helper.
+- [x] 12.5 Each loop iteration catches `MylispError` around parsing and
+  evaluation. `KeyboardInterrupt` resets the buffer; `EOFError` on an
+  empty buffer returns 0, on a non-empty buffer discards and keeps
+  prompting. In test mode (synthetic `inputs`) iterator exhaustion is
+  the EOF analogue.
+- [x] 12.6 `tests/unit/test_repl.py` drives `run_repl` with synthetic
+  `inputs` lists, covering multiline accumulation (parens, quote target,
+  unterminated string), every directive (with `:load` against a temp
+  file), `:quit` aliases, unknown-directive recovery, parse/lex/runtime
+  error recovery, and the readline-ImportError fallback.

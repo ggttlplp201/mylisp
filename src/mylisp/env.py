@@ -60,3 +60,16 @@ class Env:
     def extend(self, bindings: dict[str, Value] | None = None) -> Env:
         """Return a new child env with ``self`` as its parent."""
         return Env(bindings, parent=self)
+
+    def names(self) -> list[str]:
+        """Return every visible binding name, innermost-first, no duplicates."""
+        seen: set[str] = set()
+        out: list[str] = []
+        env: Env | None = self
+        while env is not None:
+            for name in env._frame:
+                if name not in seen:
+                    seen.add(name)
+                    out.append(name)
+            env = env._parent
+        return out
