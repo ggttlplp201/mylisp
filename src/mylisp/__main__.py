@@ -86,7 +86,15 @@ def _run_file(path: str) -> int:
     except OSError as exc:
         sys.stderr.write(f"mylisp: cannot read {path}: {exc}\n")
         return 1
-    file_path = Path(path).resolve()
+    # SPEC §5.12.1: relative `(load …)` calls inside the initial program
+    # resolve against the directory of that program "after resolving the
+    # initial file's path" — i.e. as written on the CLI. We deliberately
+    # do NOT canonicalise via Path.resolve() because that would inject the
+    # absolute checkout location into §5.12.3 error messages and break
+    # `make acceptance` on any machine other than the one that wrote the
+    # `.expected` files. An absolute argument stays absolute; a relative
+    # argument keeps its relative form.
+    file_path = Path(path)
     LOADER_STATE.push(file_path)
     try:
         _run_program(source, env)

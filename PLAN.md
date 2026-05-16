@@ -141,6 +141,15 @@ which incrementally widen the error handling.
   call"). Regression test in `tests/unit/test_load_closure.py`.
 - [ ] 11.5 Add an `examples/use_load.lisp` + `examples/helpers.lisp`
   pair showing a real `load` usage.
+- [x] 11.6 Stop calling `Path.resolve()` on the CLI's initial program
+  path. Without this, §5.12.3 error messages embedded the checkout's
+  absolute prefix and `err_load_missing.expected` / `err_load_lex_error.expected` /
+  `err_load_parse_error.expected` were path-bound to one machine (REVIEW.md
+  iter 15). The resolved path now matches SPEC §5.12.1's example
+  ("looks for `./x.lisp`") — absolute CLI args stay absolute, relative
+  args stay relative. The three load-error `.expected` files in
+  `tests/acceptance/` still encode the old absolute form; updating them
+  is Critic-owned per SPEC §3 / §7.
 
 ## Phase 12: REPL upgrades (SPEC §11)
 
