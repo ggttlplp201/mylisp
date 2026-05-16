@@ -1,0 +1,1 @@
+LexError: invalid string escape \x at line 1, col 5 in /Users/leon/mylisp/tests/acceptance/fixtures/load_bad_lex.lisp
