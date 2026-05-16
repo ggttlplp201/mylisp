@@ -6,7 +6,7 @@ ITER=$(cat .ralph/iteration)
 
 cat prompts/CRITIC_PROMPT.md | \
   codex exec \
-    --sandbox workspace-write \
+    --sandbox danger-full-access \
     --skip-git-repo-check \
     --cd "$(pwd)" \
     - \
