@@ -108,8 +108,14 @@ def _run_file(path: str) -> int:
 
 def _run_expr(source: str) -> int:
     # SPEC §1.3: ``./mylisp -e "<expr>"`` evaluates a single expression.
-    # Parse first (cheap, stateless) so we can reject zero- and multi-expression
-    # input before touching the prelude or printing anything.
+    # SPEC §5.11 requires the prelude to be fully evaluated before a `-e`
+    # expression is parsed, so build the global env first; a prelude-load
+    # failure must take precedence over any malformed `-e` payload.
+    try:
+        env = _make_global_env()
+    except MylispError as exc:
+        sys.stderr.write(str(exc) + "\n")
+        return 1
     try:
         tokens = tokenize(source)
         exprs = parse(tokens)
@@ -120,7 +126,6 @@ def _run_expr(source: str) -> int:
         sys.stderr.write("mylisp: -e requires exactly one expression\n")
         return 1
     try:
-        env = _make_global_env()
         result = evaluate(exprs[0], env)
     except MylispError as exc:
         sys.stderr.write(str(exc) + "\n")

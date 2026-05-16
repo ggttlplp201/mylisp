@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from mylisp.__main__ import main
+from mylisp import __main__ as cli_main
+from mylisp.__main__ import PreludeLoadError, main
 
 
 def test_dash_e_single_expression_prints_write_form(
@@ -68,3 +69,70 @@ def test_dash_e_rejects_multiple_compound_expressions(
     assert rc == 1
     assert captured.out == ""
     assert captured.err == "mylisp: -e requires exactly one expression\n"
+
+
+def test_dash_e_prelude_failure_takes_precedence_over_empty_input(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SPEC §5.11: the prelude must be fully evaluated before a `-e` expression
+    is parsed. A prelude-load failure must therefore surface before any
+    rejection of zero- or multi-expression `-e` payloads.
+    """
+
+    def _boom(_env: object) -> None:
+        raise PreludeLoadError("synthetic prelude failure")
+
+    monkeypatch.setattr(cli_main, "_load_prelude", _boom)
+    rc = main(["-e", ""])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "RuntimeError: prelude load failed: synthetic prelude failure\n"
+    )
+
+
+def test_dash_e_prelude_failure_takes_precedence_over_lex_error(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A LexError in the `-e` payload must not be reported when the prelude
+    cannot load — the env is built first, so the prelude error wins.
+    """
+
+    def _boom(_env: object) -> None:
+        raise PreludeLoadError("synthetic prelude failure")
+
+    monkeypatch.setattr(cli_main, "_load_prelude", _boom)
+    rc = main(["-e", '"unterminated'])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "RuntimeError: prelude load failed: synthetic prelude failure\n"
+    )
+
+
+def test_dash_e_prelude_failure_takes_precedence_over_multi_expression(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Multi-expression `-e` input must not be reported when the prelude
+    cannot load — bootstrap order (§5.11) puts the prelude before the parse.
+    """
+
+    def _boom(_env: object) -> None:
+        raise PreludeLoadError("synthetic prelude failure")
+
+    monkeypatch.setattr(cli_main, "_load_prelude", _boom)
+    rc = main(["-e", "1 2"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert captured.out == ""
+    assert (
+        captured.err
+        == "RuntimeError: prelude load failed: synthetic prelude failure\n"
+    )
