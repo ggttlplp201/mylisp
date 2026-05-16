@@ -71,22 +71,38 @@
       (f (car lst) (foldr f init (cdr lst)))))
 
 ; §5.10.5 List search
+;
+; `length` is invoked first on the input list so that improper inputs raise
+; `type error: expected proper list, got <input>` even when the matching
+; element occurs before the dotted tail.
 (define (member x lst)
-  (cond ((null? lst) #f)
-        ((equal? x (car lst)) lst)
-        (else (member x (cdr lst)))))
+  (length lst)
+  (letrec ((loop (lambda (l)
+                   (cond ((null? l) #f)
+                         ((equal? x (car l)) l)
+                         (else (loop (cdr l)))))))
+    (loop lst)))
 
 (define (memq x lst)
-  (cond ((null? lst) #f)
-        ((eq? x (car lst)) lst)
-        (else (memq x (cdr lst)))))
+  (length lst)
+  (letrec ((loop (lambda (l)
+                   (cond ((null? l) #f)
+                         ((eq? x (car l)) l)
+                         (else (loop (cdr l)))))))
+    (loop lst)))
 
 (define (assoc k alst)
-  (cond ((null? alst) #f)
-        ((equal? k (car (car alst))) (car alst))
-        (else (assoc k (cdr alst)))))
+  (length alst)
+  (letrec ((loop (lambda (l)
+                   (cond ((null? l) #f)
+                         ((equal? k (car (car l))) (car l))
+                         (else (loop (cdr l)))))))
+    (loop alst)))
 
 (define (assq k alst)
-  (cond ((null? alst) #f)
-        ((eq? k (car (car alst))) (car alst))
-        (else (assq k (cdr alst)))))
+  (length alst)
+  (letrec ((loop (lambda (l)
+                   (cond ((null? l) #f)
+                         ((eq? k (car (car l))) (car l))
+                         (else (loop (cdr l)))))))
+    (loop alst)))
